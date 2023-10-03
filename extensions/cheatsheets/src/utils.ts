@@ -87,7 +87,6 @@ function formatTables(markdown: string): string {
     .join('\n');
 }
 
-// add to favorites function that adds the value to localstorage
 async function addToFavorites(value: string) {
   const favorites = await getFavorites();
   if (favorites.includes(value)) {
