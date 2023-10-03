@@ -1,4 +1,5 @@
 import { File } from './service';
+import { LocalStorage } from "@raycast/api";
 
 function getFileName(path: string): string {
   const tokens = path.split('.');
@@ -86,4 +87,42 @@ function formatTables(markdown: string): string {
     .join('\n');
 }
 
-export { getSheets, stripFrontmatter, stripTemplateTags, formatTables };
+// add to favorites function that adds the value to localstorage
+async function addToFavorites(value: string) {
+  const favorites = await getFavorites();
+  if (favorites.includes(value)) {
+    return;
+  }
+  favorites.push(value);
+  await writeFavorites(favorites);
+}
+
+async function getFavorites(): Promise<string[]> {
+  let favoritesJson = await LocalStorage.getItem<string>('favorites');
+  if (!favoritesJson) {
+    favoritesJson = '{"favorites":[]}';
+  }
+  const favorites = JSON.parse(favoritesJson)['favorites'];
+  return favorites;
+}
+
+async function removeFromFavorites(value: string) {
+  const favorites = await getFavorites();
+  const newFavorites = favorites.filter(function (v: string) { return v !== value });
+  await writeFavorites(newFavorites);
+}
+
+async function writeFavorites(favorites: string[]) {
+  await LocalStorage.setItem('favorites', JSON.stringify({ favorites }));
+}
+
+
+export {
+  getSheets,
+  stripFrontmatter,
+  stripTemplateTags,
+  formatTables,
+  addToFavorites,
+  getFavorites,
+  removeFromFavorites
+};

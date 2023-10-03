@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Detail, Icon, List } from '@raycast/api';
+import { Action, ActionPanel, Detail, Icon, List, ListSection } from '@raycast/api';
 import { useEffect, useState } from 'react';
 
 import Service from './service';
@@ -7,16 +7,23 @@ import {
   stripFrontmatter,
   stripTemplateTags,
   formatTables,
+  addToFavorites,
+  removeFromFavorites,
+  getFavorites,
 } from './utils';
 
 function Command() {
   const [sheets, setSheets] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [isLoading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchList() {
       const files = await Service.listFiles();
-      const sheets = getSheets(files);
+      let sheets = getSheets(files);
+      const favorites = await getFavorites();
+      sheets = sheets.filter((s) => !favorites.includes(s));
+      setFavorites(favorites);
       setSheets(sheets);
       setLoading(false);
     }
@@ -26,22 +33,18 @@ function Command() {
 
   return (
     <List isLoading={isLoading}>
-      {sheets.map((sheet) => (
-        <List.Item
-          actions={
-            <ActionPanel>
-              <Action.Push
-                title="Open Cheatsheet"
-                icon={Icon.Window}
-                target={<SheetView slug={sheet} />}
-              />
-              <Action.OpenInBrowser url={Service.urlFor(sheet)} />
-            </ActionPanel>
-          }
-          key={sheet}
-          title={sheet}
-        />
-      ))}
+      {favorites.length > 0 && (
+      <List.Section title="Favorites">
+        {favorites.map((sheet) => (
+          <SheetItem sheet={sheet} isFavorite={true} />
+        ))}
+      </List.Section>
+      )}
+      <List.Section title="Cheatsheets">
+        {sheets.map((sheet) => (
+          <SheetItem sheet={sheet} isFavorite={false} />
+        ))}
+      </List.Section>
     </List>
   );
 }
@@ -69,6 +72,33 @@ function SheetView(props: SheetProps) {
   }, []);
 
   return <Detail isLoading={isLoading} markdown={sheet} />;
+}
+
+interface SheetItemProps {
+  sheet: string;
+  isFavorite: boolean;
+}
+
+function SheetItem(props: SheetItemProps) {
+  const { sheet, isFavorite} = props;
+
+  return (
+  <List.Item
+  actions={
+    <ActionPanel>
+      <Action.Push
+        title="Open Cheatsheet"
+        icon={Icon.Window}
+        target={<SheetView slug={sheet} />}
+      />
+      <Action.OpenInBrowser url={Service.urlFor(sheet)} />
+      {isFavorite && <Action title="Remove from Favorites" onAction={async () => await removeFromFavorites(sheet)} />}
+      {!isFavorite && <Action title="Add to Favorites" onAction={async () => await addToFavorites(sheet)} />}
+    </ActionPanel>
+  }
+  key={sheet}
+  title={sheet}
+/>);
 }
 
 export default Command;
